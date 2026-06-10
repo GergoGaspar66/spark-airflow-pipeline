@@ -1,0 +1,44 @@
+name: Prefect Modular PySpark ETL with Delta Lake
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Empty Folders
+        run: |
+          mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Java (JRE) for PySpark
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      # 5. Lépés: Prefect, PySpark ÉS a Delta Lake Python könyvtár telepítése
+      - name: Install Prefect, PySpark and Delta Lake
+        run: |
+          python -m pip install --upgrade pip
+          pip install prefect pyspark delta-spark
+
+      - name: Run Prefect Medallion Pipeline
+        run: |
+          export PREFECT_API_URL=""
+          python medallion_orchestrator.py
