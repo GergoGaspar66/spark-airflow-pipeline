@@ -98,16 +98,9 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: bash -c "
-      airflow db migrate &&
-      airflow users create
-        --username airflow
-        --password airflow
-        --firstname admin
-        --lastname admin
-        --role Admin
-        --email admin@example.com
-    "
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --username airflow --password airflow --firstname admin --lastname admin --role Admin --email admin@example.com"
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
