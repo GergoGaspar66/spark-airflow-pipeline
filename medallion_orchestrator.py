@@ -1,4 +1,4 @@
-from gold_stage import run_gold
+from gold_etl import run_gold
 from silver_etl import run_silver
 from bronze_etl import run_bronze
 import sys
@@ -6,12 +6,13 @@ from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
-# Biztosítjuk, hogy a Python lássa a scripts mappát az importáláshoz
+# Megmondjuk a Pythonnak, hogy nézzen be a scripts mappa belsejébe
 sys.path.append("scripts")
+
+# Most már pontosan a scripts mappában lévő fájlneveket importáljuk
 
 
 def get_spark_session():
-    # Spark konfigurálása a Delta Lake (.jar) motor automatikus letöltéséhez
     builder = SparkSession.builder \
         .appName("Medallion_Delta_Pipeline") \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
@@ -39,15 +40,13 @@ def gold_task(spark):
 
 @flow(name="Modular-Delta-Medallion-Pipeline")
 def main_orchestrator():
-    # 1. Elindítjuk a közös Spark Session-t
     spark = get_spark_session()
 
-    # 2. Végrehajtjuk a fázisokat sorrendben
+    # A fázisok futtatása szigorú sorrendben a scripts mappából
     bronze_task(spark)
     silver_task(spark)
     gold_task(spark)
 
-    # 3. A legvégén biztonságosan leállítjuk a Sparkot
     spark.stop()
 
 
