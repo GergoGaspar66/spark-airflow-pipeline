@@ -9,17 +9,19 @@ from scripts.gold_etl import run_gold
 
 
 def get_spark_session():
-    # Megtisztított, perjelek nélküli konfigurációs lánc
     builder = SparkSession.builder \
         .appName("Medallion_Delta_Pipeline") \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .config("spark.sql.warehouse.dir", "/tmp/spark-warehouse") \
-        .config("spark.driver.bindAddress", "127.0.0.1") \
         .config("spark.sql.ui.enabled", "false") \
         .config("spark.cleaner.referenceTracking", "false") \
         .config("spark.cleaner.referenceTracking.blocking", "false") \
-        .config("spark.network.crypto.enabled", "false")
+        .config("spark.network.crypto.enabled", "false") \
+        # JAVÍTÁS: Kényszerítjük a Sparkot a belső Localhost hálózat használatára (Eltünteti a Connection Refused hibát)
+    .config("spark.driver.host", "127.0.0.1") \
+        .config("spark.driver.bindAddress", "127.0.0.1") \
+        .config("spark.master", "local[*]")
 
     return configure_spark_with_delta_pip(builder).getOrCreate()
 
