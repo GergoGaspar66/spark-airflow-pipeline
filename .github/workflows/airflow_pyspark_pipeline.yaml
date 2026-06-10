@@ -11,63 +11,97 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup environment
+      - name: Create folders
+        run: |
+          mkdir -p data/bronze data/silver data/gold
+          mkdir -p processed/bronze processed/silver processed/gold
+          mkdir -p logs plugins
+
+      - name: Setup Airflow UID
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
 
-      - name: Install curl
-        run: |
-          sudo apt-get update && sudo apt-get install -y curl
-
-      - name: Build containers
+      - name: Build Docker Images
         run: |
           docker compose build
 
+      - name: Start Postgres and Redis
+        run: |
+          docker compose up -d postgres redis
+
       - name: Wait for Postgres
         run: |
-          until docker compose exec -T postgres pg_isready -U airflow; do
+          for i in {1..30}; do
+            if docker compose exec -T postgres pg_isready -U airflow; then
+              echo "Postgres is ready"
+              exit 0
+            fi
+
             echo "Waiting postgres..."
-            sleep 3
+            sleep 5
           done
 
-      - name: Start Airflow init
+          echo "Postgres failed to start"
+          docker compose logs postgres
+          exit 1
+
+      - name: Initialize Airflow Database
         run: |
           docker compose up airflow-init
 
-      - name: Start services
+      - name: Start Airflow Services
         run: |
-          docker compose up -d
+          docker compose up -d airflow-webserver airflow-scheduler airflow-worker airflow-triggerer
 
-      - name: Check containers
+      - name: Show Container Status
         run: |
           docker compose ps
 
-      - name: Wait for Airflow
+      - name: Wait for Airflow Webserver
         run: |
-          for i in {1..40}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+          for i in {1..60}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || true)
 
-            echo "Attempt $i - $STATUS"
+            echo "Attempt $i - Status: $STATUS"
 
             if [ "$STATUS" = "200" ]; then
-              echo "Airflow ready"
+              echo "Airflow is ready"
               exit 0
             fi
 
             sleep 10
           done
 
-          docker compose logs --tail=100 airflow-webserver
+          echo "Airflow failed to start"
+          docker compose logs airflow-webserver
+          docker compose logs airflow-scheduler
           exit 1
+
+      - name: Verify DAG Exists
+        run: |
+          docker compose exec -T airflow-webserver airflow dags list
 
       - name: Trigger DAG
         run: |
           docker compose exec -T airflow-webserver airflow dags trigger medallion_orchestrator
 
-      - name: Check DAG
+      - name: Wait for DAG Start
+        run: |
+          sleep 20
+
+      - name: Show DAG Runs
         run: |
           docker compose exec -T airflow-webserver airflow dags list-runs -d medallion_orchestrator
+
+      - name: Dump Logs On Failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs postgres
+          docker compose logs redis
+          docker compose logs airflow-webserver
+          docker compose logs airflow-scheduler
+          docker compose logs airflow-worker
