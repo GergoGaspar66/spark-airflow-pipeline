@@ -24,6 +24,9 @@ def run_silver(spark):
     df_clean.write \
         .format("delta") \
         .mode("overwrite") \
+        .option("delta.columnMapping.mode", "name") \
+        .option("delta.minReaderVersion", "2") \
+        .option("delta.minWriterVersion", "5") \
         .save(silver_dir)
 
     logger.info(f"Adatok sikeresen megtisztitva es elmentve ide: {silver_dir}")
