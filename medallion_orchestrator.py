@@ -9,6 +9,7 @@ from scripts.gold_etl import run_gold
 
 
 def get_spark_session():
+    # Megtisztított, perjelek nélküli konfigurációs lánc
     builder = SparkSession.builder \
         .appName("Medallion_Delta_Pipeline") \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
@@ -16,8 +17,7 @@ def get_spark_session():
         .config("spark.sql.warehouse.dir", "/tmp/spark-warehouse") \
         .config("spark.driver.bindAddress", "127.0.0.1") \
         .config("spark.sql.ui.enabled", "false") \
-        # JAVÍTÁS: Letiltjuk a belső Java takarító mechanizmusokat a hibátlan leálláshoz
-    .config("spark.cleaner.referenceTracking", "false") \
+        .config("spark.cleaner.referenceTracking", "false") \
         .config("spark.cleaner.referenceTracking.blocking", "false") \
         .config("spark.network.crypto.enabled", "false")
 
