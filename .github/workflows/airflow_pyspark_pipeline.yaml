@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
 
-      # 3. Lépés: Bejelentkezés a Docker Hubra (A letöltési hibák elkerülése érdekében)
+      # 3. Lépés: Bejelentkezés a Docker Hubra
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -33,14 +33,14 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Várakozás és a DAG elindítása a belső Python motoron keresztül
+      # 5. Lépés: Várakozás és a DAG elindítása a pontos bináris útvonallal
       - name: Wait for Airflow API and Trigger DAG
         run: |
           echo "Várakozás az Airflow és az adatbázis beindulására (45 másodperc)..."
           sleep 45
           
-          echo "=== Medallion Pipeline indítása a belső Python CLI segítségével ==="
-          docker compose exec -T airflow-webserver python -m airflow dags trigger medallion_full_pipeline
+          echo "=== Medallion Pipeline indítása a pontos bináris útvonallal ==="
+          docker compose exec -T airflow-webserver /usr/local/bin/airflow dags trigger medallion_full_pipeline
 
       # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
       - name: Check DAG Execution Status
@@ -49,4 +49,4 @@ jobs:
           sleep 50
           
           echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver python -m airflow dags state medallion_full_pipeline
+          docker compose exec -T airflow-webserver /usr/local/bin/airflow dags state medallion_full_pipeline
