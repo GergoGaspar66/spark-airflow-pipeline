@@ -1,7 +1,10 @@
+import os
+import shutil
 from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
+# Pont-alapú importálás a scripts mappából
 from scripts.bronze_etl import run_bronze
 from scripts.silver_etl import run_silver
 from scripts.gold_etl import run_gold
@@ -42,8 +45,16 @@ def gold_task(spark):
 
 @flow(name="Modular-Delta-Medallion-Pipeline")
 def main_orchestrator():
+    # JAVÍTÁS: Mielőtt elindul a Spark, fizikailag letöröljük a régi, nem particionált adatokat.
+    # Ez garantálja, hogy a Delta Lake tiszta lappal indul, és engedi a dátum alapú könyvtárakat!
+    if os.path.exists("data"):
+        print("=== Régi adatszerkezet eltávolítása a tiszta particionáláshoz ===")
+        shutil.rmtree("data")
+
     spark = get_spark_session()
+
     try:
+        # A fázisok futtatása sorrendben (Az overwriteSchema NÉLKÜLI scriptekkel)
         bronze_task(spark)
         silver_task(spark)
         gold_task(spark)

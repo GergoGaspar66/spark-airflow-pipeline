@@ -88,7 +88,6 @@ def run_bronze(spark):
         .format("delta") \
         .mode("overwrite") \
         .partitionBy("Feldolgozas_Datuma") \
-        .option("overwriteSchema", "true") \
         .option("delta.columnMapping.mode", "name") \
         .option("delta.minReaderVersion", "2") \
         .option("delta.minWriterVersion", "5") \
