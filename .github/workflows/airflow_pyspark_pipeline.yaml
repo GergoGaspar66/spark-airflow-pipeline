@@ -1,45 +1,51 @@
-name: Airflow PySpark ETL Runner
+name: Airflow PySpark ETL Runner (Nyomozó verzió)
 
 on:
   push:
     branches:
-      - main  # Akkor indul el, ha a main ágra commitolsz
-  workflow_dispatch: # Ez gombot add a GitHub felületén, hogy manuálisan is el tued indítani tesztelésre
+      - main
+  workflow_dispatch:
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Lépés: A GitHubról letöltjük a kódjaidat a virtuális gépre
+      # 1. Lépés: Kód letöltése
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Lépés: Létrehozzuk az üres mappákat a GitHub virtuális gépén
+      # 2. Lépés: Mappák létrehozása
       - name: Create Empty Folders
         run: |
           mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
 
-      # 3. Lépés: Docker Compose elindítása a te beállításaiddal
+      # 3. Lépés: Airflow indítása
       - name: Start Airflow with Docker Compose
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 4. Lépés: Várunk, hogy az Airflow teljesen beinduljon
+      # 4. Lépés: Várakozás az indulásra
       - name: Wait for Airflow to be healthy
         run: |
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: A meglévő webserver környezet használata új konténerként a DAG indításához
-      - name: Trigger Airflow DAG
+      # 5. Lépés: NYOMOZÁS - Megkeressük az airflow parancsot a konténerben
+      - name: Locate Airflow Inside Container
         run: |
-          docker compose run --rm airflow-webserver airflow dags trigger medallion_full_pipeline
-          echo "Várakozás a PySpark feladat lefutására..."
-          sleep 50
+          echo "=== 1. PRÓBA: Hol van az airflow parancs a PATH-ban? ==="
+          docker compose exec -T airflow-webserver which airflow || echo "Sima 'which' nem talalta"
+          
+          echo "=== 2. PRÓBA: Kereses az egesz kontenerben... ==="
+          docker compose exec -T --user root airflow-webserver find / -name "airflow" -type f 2>/dev/null || echo "A find nem talalt semmit"
 
-      # 6. Lépés: A meglévő webserver környezet használata új konténerként a státusz ellenőrzéséhez
-      - name: Check DAG Execution Logs
+      # 6. Lépés: Megnézzük a futó konténereket és környezeti változóikat
+      - name: Debug Docker Environment
         run: |
-          docker compose run --rm airflow-webserver airflow dags state medallion_full_pipeline
+          echo "=== Futó konténerek listája ==="
+          docker compose ps
+          
+          echo "=== Konténer belső PATH változója ==="
+          docker compose exec -T airflow-webserver env | grep PATH || echo "Nem sikerult lemerni az env-et"
