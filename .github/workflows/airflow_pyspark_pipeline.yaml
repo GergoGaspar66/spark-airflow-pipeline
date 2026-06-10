@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Lépés: Kód letöltése a GitHub virtuális gépre
+      # 1. Lépés: Kód letöltése
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Lépés: Adat- és feldolgozási mappák létrehozása
+      # 2. Lépés: Mappák létrehozása
       - name: Create Empty Folders
         run: |
           mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
@@ -27,20 +27,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4. Lépés: Docker Compose elindítása a háttérben
+      # 4. Lépés: Docker Compose elindítása (Ez most már a beépített curl-lel épül fel!)
       - name: Start Airflow with Docker Compose
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Várakozás és a DAG elindítása a pontos bináris útvonallal
+      # 5. Lépés: Várakozás és a DAG elindítása a beépített curl-lel
       - name: Wait for Airflow API and Trigger DAG
         run: |
           echo "Várakozás az Airflow és az adatbázis beindulására (45 másodperc)..."
           sleep 45
           
-          echo "=== Medallion Pipeline indítása a pontos bináris útvonallal ==="
-          docker compose exec -T airflow-webserver /usr/local/bin/airflow dags trigger medallion_full_pipeline
+          echo "=== Medallion Pipeline indítása a beépített curl segítségével ==="
+          docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" \
+          -H "Content-Type: application/json" \
+          --user "airflow:airflow" \
+          -d '{}'
 
       # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
       - name: Check DAG Execution Status
@@ -49,4 +52,5 @@ jobs:
           sleep 50
           
           echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver /usr/local/bin/airflow dags state medallion_full_pipeline
+          docker compose exec -T airflow-webserver curl -s "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" \
+          --user "airflow:airflow"
