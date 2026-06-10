@@ -6,27 +6,37 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ''
+
+    AIRFLOW__CORE__FERNET_KEY: "L182Zkc0u7DtNt6XX7cdo6mGlixKm_5QrHnQCgJwh7k="
+
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
-    # 1. JAVÍTÁS: Bekapcsoljuk az Airflow belső REST API-ját
+
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 10
+
   volumes:
     - ./dags:/opt/airflow/dags
-    - ./scripts:/opt/airflow/scripts        
+    - ./scripts:/opt/airflow/scripts
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ./data:/opt/airflow/data
-    - ./raw:/opt/airflow/raw                
-    - ./processed:/opt/airflow/processed    
+    - ./raw:/opt/airflow/raw
+    - ./processed:/opt/airflow/processed
+
   user: "${AIRFLOW_UID:-50000}:0"
+
   depends_on:
     redis:
       condition: service_healthy
     postgres:
       condition: service_healthy
 
+
 services:
+
   postgres:
     image: postgres:13
     environment:
@@ -42,6 +52,7 @@ services:
       retries: 5
     restart: always
 
+
   redis:
     image: redis:7-alpine
     expose:
@@ -52,6 +63,7 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+
 
   airflow-webserver:
     <<: *airflow-common
@@ -65,25 +77,37 @@ services:
       retries: 5
     restart: always
 
+
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
     restart: always
+
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
     restart: always
 
+
   airflow-triggerer:
     <<: *airflow-common
     command: triggerer
     restart: always
 
+
   airflow-init:
     <<: *airflow-common
-    # 2. JAVÍTÁS: 'version' helyett 'db migrate'-re cseréljük, hogy ténylegesen létrejöjjön az adatbázis
-    command: db migrate
+    command: bash -c "
+      airflow db migrate &&
+      airflow users create
+        --username airflow
+        --password airflow
+        --firstname admin
+        --lastname admin
+        --role Admin
+        --email admin@example.com
+    "
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
@@ -91,6 +115,7 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: airflow
       _AIRFLOW_WWW_USER_PASSWORD: airflow
     user: "0:0"
+
 
 volumes:
   postgres-db-volume:

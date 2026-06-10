@@ -11,59 +11,73 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Lépés: Kód letöltése
+      # 1. Checkout
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Lépés: Mappák létrehozása
+      # 2. Create folders
       - name: Create Empty Folders
         run: |
-          mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
+          mkdir -p data/bronze data/silver data/gold \
+                   processed/bronze processed/silver processed/gold \
+                   logs plugins
 
-      # 3. Lépés: Bejelentkezés a Docker Hubra
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # 3. Docker Compose install (GitHub runner clean state miatt)
+      - name: Install Docker Compose Plugin
+        run: |
+          docker --version
+          docker compose version
 
-      # 4. Lépés: Docker Compose elindítása
-      - name: Start Airflow with Docker Compose
+      # 4. Set env
+      - name: Setup environment
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
-          docker compose up --build -d
 
-      # 5. Lépés: Intelligens várakozás és a DAG elindítása (Megvárja, amíg a 'starting' állapot 'healthy' lesz)
-      - name: Wait for Airflow API and Trigger DAG
+      # 5. Start Airflow init (VERY IMPORTANT)
+      - name: Initialize Airflow
         run: |
-          echo "Várakozás az Airflow belső elindulására..."
-          
-          # Maximum 30-szor próbálkozunk, 10 másodperces szünetekkel (maximum 5 percet várunk az inicializálásra)
-          for i in {1..30}; do
-            HTTP_STATUS=$(docker compose exec -T airflow-webserver curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
-            echo "Próbálkozás #$i - Airflow belső HTTP kód: $HTTP_STATUS"
-            
-            if [ "$HTTP_STATUS" == "200" ]; then
-              echo "Az Airflow teljesen felállt és egészséges! Pipeline indítása..."
-              
-              # DAG indítása egysoros, tiszta belső curl hívással
-              docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" -H "Content-Type: application/json" --user "airflow:airflow" -d "{}"
+          docker compose up airflow-init
+
+      # 6. Start services
+      - name: Start Airflow services
+        run: |
+          docker compose up -d
+
+      # 7. Wait for Airflow to be ready
+      - name: Wait for Airflow
+        run: |
+          echo "Waiting for Airflow webserver..."
+
+          for i in {1..40}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+
+            echo "Attempt $i - status: $STATUS"
+
+            if [ "$STATUS" = "200" ]; then
+              echo "Airflow is ready"
               exit 0
             fi
-            
+
             sleep 10
           done
-          
-          echo "HIBA: Az Airflow nem indult el időben!"
-          docker compose ps
-          docker compose logs --tail=50 airflow-webserver
+
+          echo "Airflow failed to start"
+          docker compose logs --tail=100 airflow-webserver
           exit 1
 
-      # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
+      # 8. Trigger DAG (FIXED: CLI instead of broken exec curl)
+      - name: Trigger DAG
+        run: |
+          echo "Triggering DAG: medallion_orchestrator"
+
+          docker compose exec -T airflow-webserver airflow dags trigger medallion_orchestrator
+
+      # 9. Check DAG run status
       - name: Check DAG Execution Status
         run: |
-          echo "Várakozás 50 másodpercet a PySpark feladat futására..."
-          sleep 50
-          
-          echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver curl -s "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" --user "airflow:airflow"
+          echo "Waiting for DAG run..."
+
+          sleep 30
+
+          docker compose exec -T airflow-webserver airflow dags list-runs \
+            -d medallion_orchestrator
