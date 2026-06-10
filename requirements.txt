@@ -1,3 +1,12 @@
 pyspark==3.5.0
 delta-spark==3.1.0
-apache-airflow-providers-apache-spark
+
+apache-airflow-providers-apache-spark==6.0.2
+
+# nagyon fontos fixek Airflow stackhez:
+protobuf<5
+SQLAlchemy<2.0
+cryptography<42
+cachetools<6
+packaging<24
+rich<14
