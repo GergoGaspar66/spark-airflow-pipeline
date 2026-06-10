@@ -27,30 +27,30 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4. Lépés: Docker Compose elindítása (Ez most már a beépített curl-lel épül fel!)
+      # 4. Lépés: Docker Compose elindítása
       - name: Start Airflow with Docker Compose
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Várakozás és a DAG elindítása a beépített curl-lel
+      # 5. Lépés: Várakozás és a DAG elindítása a beépített curl-lel (0.0.0.0 fix elérhetőséggel)
       - name: Wait for Airflow API and Trigger DAG
         run: |
           echo "Várakozás az Airflow és az adatbázis beindulására (45 másodperc)..."
           sleep 45
           
-          echo "=== Medallion Pipeline indítása a beépített curl segítségével ==="
-          docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" \
+          echo "=== Medallion Pipeline indítása a beépített curl segítségével ==."
+          docker compose exec -T airflow-webserver curl -X POST "http://0.0.0" \
           -H "Content-Type: application/json" \
           --user "airflow:airflow" \
           -d '{}'
 
-      # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
+      # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése (0.0.0.0 fix elérhetőséggel)
       - name: Check DAG Execution Status
         run: |
           echo "Várakozás 50 másodpercet a PySpark feladat futására..."
           sleep 50
           
           echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver curl -s "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" \
+          docker compose exec -T airflow-webserver curl -s "http://0.0.0?limit=1&order_by=-start_date" \
           --user "airflow:airflow"
