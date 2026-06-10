@@ -32,14 +32,14 @@ jobs:
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: Parancsot küldünk a webservernek a DAG elindítására
+      # 5. Lépés: Parancsot küldünk a webservernek a DAG elindítására (Root és fix útvonal)
       - name: Trigger Airflow DAG
         run: |
-          docker compose exec -T airflow-webserver airflow dags trigger medallion_full_pipeline
+          docker compose exec -T --user root airflow-webserver /usr/local/bin/airflow dags trigger medallion_full_pipeline
           echo "Várakozás a PySpark feladat lefutására..."
           sleep 50
 
-      # 6. Lépés: Ellenőrizzük a logokat
+      # 6. Lépés: Ellenőrizzük a logokat (Root és fix útvonal)
       - name: Check DAG Execution Logs
         run: |
-          docker compose exec -T airflow-webserver airflow dags state medallion_full_pipeline
+          docker compose exec -T --user root airflow-webserver /usr/local/bin/airflow dags state medallion_full_pipeline
