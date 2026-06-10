@@ -1,15 +1,11 @@
-from gold_etl import run_gold
-from silver_etl import run_silver
-from bronze_etl import run_bronze
-import sys
 from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
-# Megmondjuk a Pythonnak, hogy nézzen be a scripts mappa belsejébe
-sys.path.append("scripts")
 
-# Most már pontosan a scripts mappában lévő fájlneveket importáljuk
+from scripts.bronze_etl import run_bronze
+from scripts.silver_etl import run_silver
+from scripts.gold_etl import run_gold
 
 
 def get_spark_session():
@@ -42,7 +38,6 @@ def gold_task(spark):
 def main_orchestrator():
     spark = get_spark_session()
 
-    # A fázisok futtatása szigorú sorrendben a scripts mappából
     bronze_task(spark)
     silver_task(spark)
     gold_task(spark)
