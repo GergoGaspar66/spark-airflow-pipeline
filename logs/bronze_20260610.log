@@ -9,3 +9,14 @@
 2026-06-10 21:53:31,452 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data1.csv
 2026-06-10 21:53:31,454 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data2.csv
 2026-06-10 21:53:31,455 - INFO - --- BRONZE LAYER PROCESSING FINISHED ---
+2026-06-10 22:04:32,953 - INFO - --- BRONZE LAYER PROCESSING STARTED ---
+2026-06-10 22:04:32,955 - INFO - Logfajl mentese ide: logs/bronze_20260610.log
+2026-06-10 22:04:32,956 - INFO - Talalt CSV fajlok szama: 2
+2026-06-10 22:04:32,957 - INFO - Feldolgozando fajlok listaja: data1.csv, data2.csv
+2026-06-10 22:04:36,505 - INFO - BASIC INFO - Beolvasott nyers sorok szama: 1999
+2026-06-10 22:04:36,506 - INFO - BASIC INFO - Talalt oszlopok szama: 24
+2026-06-10 22:04:36,508 - INFO - BASIC INFO - Oszlopok nevei: Order No, Order Date, Customer Name, Address, City, State, Customer Type, Account Manager, Order Priority, Product Name, Product Category, Product Container, Ship Mode, Ship Date, Cost Price, Retail Price, Profit Margin, Order Quantity, Sub Total, Discount %, Discount $, Order Total, Shipping Cost, Total
+2026-06-10 22:04:42,677 - INFO - Az adatok sikeresen elmentve particionalva a Delta tablaba: data/bronze
+2026-06-10 22:04:42,679 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data1.csv
+2026-06-10 22:04:42,680 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data2.csv
+2026-06-10 22:04:42,681 - INFO - --- BRONZE LAYER PROCESSING FINISHED ---
