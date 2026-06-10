@@ -1,4 +1,3 @@
-
 x-airflow-common: &airflow-common
   build: .
   environment:
@@ -10,6 +9,8 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
+    # 1. JAVÍTÁS: Bekapcsoljuk az Airflow belső REST API-ját
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts        
@@ -81,7 +82,8 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: version
+    # 2. JAVÍTÁS: 'version' helyett 'db migrate'-re cseréljük, hogy ténylegesen létrejöjjön az adatbázis
+    command: db migrate
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
@@ -89,7 +91,6 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: airflow
       _AIRFLOW_WWW_USER_PASSWORD: airflow
     user: "0:0"
-   
 
 volumes:
   postgres-db-volume:
