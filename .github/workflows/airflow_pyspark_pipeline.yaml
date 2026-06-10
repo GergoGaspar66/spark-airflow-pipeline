@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main  # Akkor indul el, ha a main ágra commitolsz
-  workflow_dispatch: # Ez gombot add a GitHub felületén, hogy manuálisan is el tudd indítani tesztelésre
+  workflow_dispatch: # Ez gombot add a GitHub felületén, hogy manuálisan is el tued indítani tesztelésre
 
 jobs:
   run-pipeline:
@@ -32,14 +32,14 @@ jobs:
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: A hivatalos CLI konténer használata a DAG indításához
+      # 5. Lépés: A meglévő webserver környezet használata új konténerként a DAG indításához
       - name: Trigger Airflow DAG
         run: |
-          docker compose run --rm airflow-cli dags trigger medallion_full_pipeline
+          docker compose run --rm airflow-webserver airflow dags trigger medallion_full_pipeline
           echo "Várakozás a PySpark feladat lefutására..."
           sleep 50
 
-      # 6. Lépés: A hivatalos CLI konténer használata a státusz ellenőrzéséhez
+      # 6. Lépés: A meglévő webserver környezet használata új konténerként a státusz ellenőrzéséhez
       - name: Check DAG Execution Logs
         run: |
-          docker compose run --rm airflow-cli dags state medallion_full_pipeline
+          docker compose run --rm airflow-webserver airflow dags state medallion_full_pipeline
