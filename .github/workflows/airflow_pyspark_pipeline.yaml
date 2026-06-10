@@ -33,18 +33,37 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Várunk kicsit, hogy a Docker generálja a logokat
-      - name: Wait for Containers
-        run: sleep 40
-
-      # 6. Lépés: KIOLVASSUK A VALÓDI HIBÁT
-      - name: Read Docker Crash Logs
+      # 5. Lépés: Intelligens várakozás és a DAG elindítása (Megvárja, amíg a 'starting' állapot 'healthy' lesz)
+      - name: Wait for Airflow API and Trigger DAG
         run: |
-          echo "=== 1. Konténerek állapota (Melyik fut és melyik omlott össze?) ==="
+          echo "Várakozás az Airflow belső elindulására..."
+          
+          # Maximum 30-szor próbálkozunk, 10 másodperces szünetekkel (maximum 5 percet várunk az inicializálásra)
+          for i in {1..30}; do
+            HTTP_STATUS=$(docker compose exec -T airflow-webserver curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+            echo "Próbálkozás #$i - Airflow belső HTTP kód: $HTTP_STATUS"
+            
+            if [ "$HTTP_STATUS" == "200" ]; then
+              echo "Az Airflow teljesen felállt és egészséges! Pipeline indítása..."
+              
+              # DAG indítása egysoros, tiszta belső curl hívással
+              docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" -H "Content-Type: application/json" --user "airflow:airflow" -d "{}"
+              exit 0
+            fi
+            
+            sleep 10
+          done
+          
+          echo "HIBA: Az Airflow nem indult el időben!"
           docker compose ps
-          
-          echo "=== 2. Miért állt le az Inicializálás? (airflow-init logok) ==="
-          docker compose logs --tail=50 airflow-init
-          
-          echo "=== 3. Miért nem indul el a Webserver? (airflow-webserver logok) ==="
           docker compose logs --tail=50 airflow-webserver
+          exit 1
+
+      # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
+      - name: Check DAG Execution Status
+        run: |
+          echo "Várakozás 50 másodpercet a PySpark feladat futására..."
+          sleep 50
+          
+          echo "=== Pipeline legfrissebb futási státusza ==="
+          docker compose exec -T airflow-webserver curl -s "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" --user "airflow:airflow"
