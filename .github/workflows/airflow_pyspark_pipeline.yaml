@@ -1,0 +1,46 @@
+name: Airflow PySpark ETL Runner
+
+on:
+  push:
+    branches:
+      - main  # Akkor indul el, ha a main ágra commitolsz
+  workflow_dispatch: # Ez gombot ad a GitHub felületén, hogy manuálisan is el tudd indítani tesztelésre
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Lépés: A GitHubról letöltjük a kódjaidat a virtuális gépre
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Lépés: Létrehozzuk az üres mappákat a GitHub virtuális gépén (Mivel nincsenek fent Git-en)
+      - name: Create Empty Folders
+        run: |
+          mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
+
+      # 3. Lépés: Docker Compose elindítása a te beállításaiddal
+      - name: Start Airflow with Docker Compose
+        run: |
+          echo "AIRFLOW_UID=$(id -u)" > .env
+          docker compose up --build -d
+
+      # 4. Lépés: Várunk, hogy az Airflow, az adatbázis és a sorbanállás (Redis) teljesen beinduljon
+      - name: Wait for Airflow to be healthy
+        run: |
+          echo "Várakozás az Airflow és a háttérrendszerek indulására..."
+          sleep 40
+
+      # 5. Lépés: Parancsot küldünk a futó konténernek, hogy indítsa el a Python DAG-odat
+      - name: Trigger and Run Airflow DAG
+        run: |
+          docker compose exec -T airflow-worker airflow dags trigger medallion_full_pipeline
+          
+          echo "Várakozás a PySpark feladat lefutására..."
+          sleep 50
+
+      # 6. Lépés: Ellenőrizzük a logokat, hogy lássuk sikeres volt-e a futás
+      - name: Check DAG Execution Logs
+        run: |
+          docker compose exec -T airflow-worker airflow dags state medallion_full_pipeline
