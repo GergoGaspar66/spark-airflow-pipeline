@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Lépés: Létrehozzuk az üres mappákat a GitHub virtuális gépén (Mivel nincsenek fent Git-en)
+      # 2. Lépés: Létrehozzuk az üres mappákat a GitHub virtuális gépén
       - name: Create Empty Folders
         run: |
           mkdir -p data/bronze data/silver data/gold processed/bronze processed/silver processed/gold
@@ -26,21 +26,21 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 4. Lépés: Várunk, hogy az Airflow, az adatbázis és a sorbanállás (Redis) teljesen beinduljon
+      # 4. Lépés: Várunk, hogy az Airflow teljesen beinduljon
       - name: Wait for Airflow to be healthy
         run: |
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: Parancsot küldünk a webservernek, hogy indítsa el a DAG-ot
+      # 5. Lépés: Parancsot küldünk a webservernek a teljes elérési úttal
       - name: Trigger and Run Airflow DAG
         run: |
-          docker compose exec -T airflow-webserver airflow dags trigger medallion_full_pipeline
+          docker compose exec -T airflow-webserver /home/airflow/.local/bin/airflow dags trigger medallion_full_pipeline
           
           echo "Várakozás a PySpark feladat lefutására..."
           sleep 50
 
-      # 6. Lépés: Ellenőrizzük a logokat
+      # 6. Lépés: Ellenőrizzük a logokat a teljes elérési úttal
       - name: Check DAG Execution Logs
         run: |
-          docker compose exec -T airflow-webserver airflow dags state medallion_full_pipeline
+          docker compose exec -T airflow-webserver /home/airflow/.local/bin/airflow dags state medallion_full_pipeline
