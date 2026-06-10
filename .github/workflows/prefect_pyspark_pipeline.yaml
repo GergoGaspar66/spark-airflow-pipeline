@@ -54,7 +54,7 @@ jobs:
           git config --global user.email "actions@github.com"
           
           # Hozzáadjuk a generált adatokat és az archivált raw fájlokat (Kényszerítve a -f kapcsolóval, ha a .gitignore tiltaná)
-          git add -f data/ processed/ logs/
+          git add -f data/ processed/ logs/ raw/
           
           # Csak akkor commitolunk, ha tényleg változott valami
           git diff-index --quiet HEAD || git commit -m "Automatikus Medallion adatok frissítése [Skip CI]"

@@ -23,7 +23,8 @@ def get_spark_session():
         .config("spark.driver.host", "127.0.0.1") \
         .config("spark.driver.bindAddress", "127.0.0.1") \
         .config("spark.master", "local[*]") \
-        .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
+        .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
+        .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
 
     return configure_spark_with_delta_pip(builder).getOrCreate()
 
