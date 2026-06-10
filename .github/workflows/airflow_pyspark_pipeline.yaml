@@ -32,15 +32,15 @@ jobs:
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: Parancsot küldünk a futó konténernek, hogy indítsa el a Python DAG-odat
+      # 5. Lépés: Parancsot küldünk a webservernek, hogy indítsa el a DAG-ot
       - name: Trigger and Run Airflow DAG
         run: |
-          docker compose exec -T airflow-worker airflow dags trigger medallion_full_pipeline
+          docker compose exec -T airflow-webserver airflow dags trigger medallion_full_pipeline
           
           echo "Várakozás a PySpark feladat lefutására..."
           sleep 50
 
-      # 6. Lépés: Ellenőrizzük a logokat, hogy lássuk sikeres volt-e a futás
+      # 6. Lépés: Ellenőrizzük a logokat
       - name: Check DAG Execution Logs
         run: |
-          docker compose exec -T airflow-worker airflow dags state medallion_full_pipeline
+          docker compose exec -T airflow-webserver airflow dags state medallion_full_pipeline
