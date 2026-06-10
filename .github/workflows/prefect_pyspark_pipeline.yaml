@@ -32,11 +32,11 @@ jobs:
           sudo apt-get install -y openjdk-17-jre-headless
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-      # 5. Lépés: Prefect és a szigorúan kompatibilis Spark + Delta verziók telepítése
+      # 5. Lépés: Kényszerített griffe telepítés a Prefect belső hibájának elhárítására
       - name: Install Prefect, PySpark and Delta Lake
         run: |
           python -m pip install --upgrade pip
-          pip install prefect==2.14.21 pyspark==3.4.1 delta-spark==2.4.0
+          pip install griffe==0.45.0 pydantic<2.0 prefect==2.14.21 pyspark==3.4.1 delta-spark==2.4.0
 
       - name: Run Prefect Medallion Pipeline
         run: |
