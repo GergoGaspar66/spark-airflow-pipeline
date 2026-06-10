@@ -32,14 +32,18 @@ jobs:
           echo "Várakozás az Airflow és a háttérrendszerek indulására..."
           sleep 40
 
-      # 5. Lépés: NYOMOZÁS - Megkeressük az airflow parancsot a konténerben
-      - name: Locate Airflow Inside Container
+      # 5. Lépés: Megpróbáljuk triggerelni a DAG-ot az összes létező szolgáltatáson keresztül
+      - name: Try Triggering DAG On All Available Services
         run: |
-          echo "=== 1. PRÓBA: Hol van az airflow parancs a PATH-ban? ==="
-          docker compose exec -T airflow-webserver which airflow || echo "Sima 'which' nem talalta"
+          echo "=== Próba a scheduler konténerrel (ha létezik) ==="
+          docker compose exec -T airflow-scheduler airflow dags trigger medallion_full_pipeline || echo "A scheduler nem elérhető vagy nincs benne airflow"
           
-          echo "=== 2. PRÓBA: Kereses az egesz kontenerben... ==="
-          docker compose exec -T --user root airflow-webserver find / -name "airflow" -type f 2>/dev/null || echo "A find nem talalt semmit"
+          echo "=== Próba a worker konténerrel (ha létezik) ==="
+          docker compose exec -T airflow-worker airflow dags trigger medallion_full_pipeline || echo "A worker nem elérhető vagy nincs benne airflow"
+          
+          echo "=== Próba a triggerer konténerrel (ha létezik) ==="
+          docker compose exec -T airflow-triggerer airflow dags trigger medallion_full_pipeline || echo "A triggerer nem elérhető vagy nincs benne airflow"
+
 
       # 6. Lépés: Megnézzük a futó konténereket és környezeti változóikat
       - name: Debug Docker Environment
