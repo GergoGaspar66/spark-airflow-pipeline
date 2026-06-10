@@ -2,7 +2,7 @@ from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
-
+# Pont-alapú importálás a scripts mappából
 from scripts.bronze_etl import run_bronze
 from scripts.silver_etl import run_silver
 from scripts.gold_etl import run_gold
@@ -14,7 +14,12 @@ def get_spark_session():
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .config("spark.sql.warehouse.dir", "/tmp/spark-warehouse") \
-        .config("spark.driver.bindAddress", "127.0.0.1")
+        .config("spark.driver.bindAddress", "127.0.0.1") \
+        .config("spark.sql.ui.enabled", "false") \
+        # JAVÍTÁS: Letiltjuk a belső Java takarító mechanizmusokat a hibátlan leálláshoz
+    .config("spark.cleaner.referenceTracking", "false") \
+        .config("spark.cleaner.referenceTracking.blocking", "false") \
+        .config("spark.network.crypto.enabled", "false")
 
     return configure_spark_with_delta_pip(builder).getOrCreate()
 
@@ -38,11 +43,14 @@ def gold_task(spark):
 def main_orchestrator():
     spark = get_spark_session()
 
-    bronze_task(spark)
-    silver_task(spark)
-    gold_task(spark)
-
-    spark.stop()
+    try:
+        # A fázisok futtatása sorrendben
+        bronze_task(spark)
+        silver_task(spark)
+        gold_task(spark)
+    finally:
+        print("=== Spark Session biztonságos leállítása ===")
+        spark.stop()
 
 
 if __name__ == "__main__":
