@@ -3,28 +3,29 @@ x-airflow-common: &airflow-common
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
 
     AIRFLOW__CORE__FERNET_KEY: "L182Zkc0u7DtNt6XX7cdo6mGlixKm_5QrHnQCgJwh7k="
 
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
 
-    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
 
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
     AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 10
 
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
     - ./data:/opt/airflow/data
     - ./raw:/opt/airflow/raw
     - ./processed:/opt/airflow/processed
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
 
   user: "${AIRFLOW_UID:-50000}:0"
 
@@ -100,11 +101,11 @@ services:
     <<: *airflow-common
     command: >
       bash -c "airflow db migrate &&
-      airflow users create --username airflow --password airflow --firstname admin --lastname admin --role Admin --email admin@example.com"
+      airflow users create --username airflow --password airflow --firstname admin --lastname admin --role Admin --email admin@example.com || true"
     environment:
       <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_DB_UPGRADE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
       _AIRFLOW_WWW_USER_USERNAME: airflow
       _AIRFLOW_WWW_USER_PASSWORD: airflow
     user: "0:0"

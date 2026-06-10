@@ -11,73 +11,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Create folders
-      - name: Create Empty Folders
-        run: |
-          mkdir -p data/bronze data/silver data/gold \
-                   processed/bronze processed/silver processed/gold \
-                   logs plugins
-
-      # 3. Docker Compose install (GitHub runner clean state miatt)
-      - name: Install Docker Compose Plugin
-        run: |
-          docker --version
-          docker compose version
-
-      # 4. Set env
       - name: Setup environment
         run: |
           echo "AIRFLOW_UID=$(id -u)" > .env
 
-      # 5. Start Airflow init (VERY IMPORTANT)
-      - name: Initialize Airflow
+      - name: Install curl
+        run: |
+          sudo apt-get update && sudo apt-get install -y curl
+
+      - name: Build containers
+        run: |
+          docker compose build
+
+      - name: Wait for Postgres
+        run: |
+          until docker compose exec -T postgres pg_isready -U airflow; do
+            echo "Waiting postgres..."
+            sleep 3
+          done
+
+      - name: Start Airflow init
         run: |
           docker compose up airflow-init
 
-      # 6. Start services
-      - name: Start Airflow services
+      - name: Start services
         run: |
           docker compose up -d
 
-      # 7. Wait for Airflow to be ready
+      - name: Check containers
+        run: |
+          docker compose ps
+
       - name: Wait for Airflow
         run: |
-          echo "Waiting for Airflow webserver..."
-
           for i in {1..40}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
 
-            echo "Attempt $i - status: $STATUS"
+            echo "Attempt $i - $STATUS"
 
             if [ "$STATUS" = "200" ]; then
-              echo "Airflow is ready"
+              echo "Airflow ready"
               exit 0
             fi
 
             sleep 10
           done
 
-          echo "Airflow failed to start"
           docker compose logs --tail=100 airflow-webserver
           exit 1
 
-      # 8. Trigger DAG (FIXED: CLI instead of broken exec curl)
       - name: Trigger DAG
         run: |
-          echo "Triggering DAG: medallion_orchestrator"
-
           docker compose exec -T airflow-webserver airflow dags trigger medallion_orchestrator
 
-      # 9. Check DAG run status
-      - name: Check DAG Execution Status
+      - name: Check DAG
         run: |
-          echo "Waiting for DAG run..."
-
-          sleep 30
-
-          docker compose exec -T airflow-webserver airflow dags list-runs \
-            -d medallion_orchestrator
+          docker compose exec -T airflow-webserver airflow dags list-runs -d medallion_orchestrator
