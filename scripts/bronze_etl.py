@@ -32,6 +32,9 @@ def run_bronze(spark):
     df_raw.write \
         .format("delta") \
         .mode("append") \
+        .option("delta.columnMapping.mode", "name") \
+        .option("delta.minReaderVersion", "2") \
+        .option("delta.minWriterVersion", "5") \
         .save(bronze_dir)
 
     logger.info(
