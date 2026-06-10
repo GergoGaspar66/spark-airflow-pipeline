@@ -2,14 +2,12 @@ from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
-# Pont-alapú importálás a scripts mappából
 from scripts.bronze_etl import run_bronze
 from scripts.silver_etl import run_silver
 from scripts.gold_etl import run_gold
 
 
 def get_spark_session():
-    # Megtisztított, perjelek nélküli konfigurációs lánc
     builder = SparkSession.builder \
         .appName("Medallion_Delta_Pipeline") \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
@@ -21,7 +19,8 @@ def get_spark_session():
         .config("spark.network.crypto.enabled", "false") \
         .config("spark.driver.host", "127.0.0.1") \
         .config("spark.driver.bindAddress", "127.0.0.1") \
-        .config("spark.master", "local[*]")
+        .config("spark.master", "local[*]") \
+        .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
     return configure_spark_with_delta_pip(builder).getOrCreate()
 
@@ -44,9 +43,7 @@ def gold_task(spark):
 @flow(name="Modular-Delta-Medallion-Pipeline")
 def main_orchestrator():
     spark = get_spark_session()
-
     try:
-        # A fázisok futtatása sorrendben
         bronze_task(spark)
         silver_task(spark)
         gold_task(spark)
