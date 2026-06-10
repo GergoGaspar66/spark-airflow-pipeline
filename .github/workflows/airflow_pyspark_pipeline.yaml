@@ -1,4 +1,4 @@
-name: Airflow PySpark ETL Runner (Nyomozó verzió)
+name: Airflow PySpark ETL Runner
 
 on:
   push:
@@ -26,30 +26,41 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 4. Lépés: Várakozás az indulásra
-      - name: Wait for Airflow to be healthy
+      # 4. és 5. Lépés: Várakozás a webserverre és a DAG elindítása API-n keresztül
+      - name: Wait for Airflow API and Trigger DAG
         run: |
-          echo "Várakozás az Airflow és a háttérrendszerek indulására..."
-          sleep 40
-
-      # 5. Lépés: Megpróbáljuk triggerelni a DAG-ot az összes létező szolgáltatáson keresztül
-      - name: Try Triggering DAG On All Available Services
-        run: |
-          echo "=== Próba a scheduler konténerrel (ha létezik) ==="
-          docker compose exec -T airflow-scheduler airflow dags trigger medallion_full_pipeline || echo "A scheduler nem elérhető vagy nincs benne airflow"
+          echo "Várakozás az Airflow webserver elindulására..."
           
-          echo "=== Próba a worker konténerrel (ha létezik) ==="
-          docker compose exec -T airflow-worker airflow dags trigger medallion_full_pipeline || echo "A worker nem elérhető vagy nincs benne airflow"
+          # Max 30-szor próbálkozunk, 10 másodperces szünetekkel
+          for i in {1..30}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+            echo "Airflow webserver HTTP kód: $HTTP_STATUS"
+            
+            if [ "$STATUS" == "200" ] || [ "$HTTP_STATUS" == "200" ]; then
+              echo "Az Airflow elérhető! Pipeline indítása..."
+              
+              # DAG indítása a hivatalos REST API-n keresztül
+              curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" \
+              -H "Content-Type: application/json" \
+              --user "airflow:airflow" \
+              -d '{}'
+              
+              exit 0
+            fi
+            
+            sleep 10
+          done
           
-          echo "=== Próba a triggerer konténerrel (ha létezik) ==="
-          docker compose exec -T airflow-triggerer airflow dags trigger medallion_full_pipeline || echo "A triggerer nem elérhető vagy nincs benne airflow"
-
-
-      # 6. Lépés: Megnézzük a futó konténereket és környezeti változóikat
-      - name: Debug Docker Environment
-        run: |
-          echo "=== Futó konténerek listája ==="
+          echo "HIBA: Az Airflow nem válaszolt időben!"
           docker compose ps
+          exit 1
+
+      # 6. Lépés: Várakozás és a futási státusz ellenőrzése
+      - name: Check DAG Execution Status
+        run: |
+          echo "Várakozás 50 másodpercet a PySpark feladat futására..."
+          sleep 50
           
-          echo "=== Konténer belső PATH változója ==="
-          docker compose exec -T airflow-webserver env | grep PATH || echo "Nem sikerult lemerni az env-et"
+          echo "=== Pipeline legfrissebb futási státusza ==="
+          curl -X GET "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" \
+          --user "airflow:airflow"
