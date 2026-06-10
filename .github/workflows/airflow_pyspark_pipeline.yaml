@@ -33,20 +33,18 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Várakozás és a DAG elindítása (Egy soros, fixált belső localhost:8080 címmel)
-      - name: Wait for Airflow API and Trigger DAG
-        run: |
-          echo "Várakozás az Airflow és az adatbázis beindulására (60 másodperc)..."
-          sleep 60
-          
-          echo "=== Medallion Pipeline indítása a beépített curl segítségével ==="
-          docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" -H "Content-Type: application/json" --user "airflow:airflow" -d "{}"
+      # 5. Lépés: Várunk kicsit, hogy a Docker generálja a logokat
+      - name: Wait for Containers
+        run: sleep 40
 
-      # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
-      - name: Check DAG Execution Status
+      # 6. Lépés: KIOLVASSUK A VALÓDI HIBÁT
+      - name: Read Docker Crash Logs
         run: |
-          echo "Várakozás 50 másodpercet a PySpark feladat futására..."
-          sleep 50
+          echo "=== 1. Konténerek állapota (Melyik fut és melyik omlott össze?) ==="
+          docker compose ps
           
-          echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver curl -s "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" --user "airflow:airflow"
+          echo "=== 2. Miért állt le az Inicializálás? (airflow-init logok) ==="
+          docker compose logs --tail=50 airflow-init
+          
+          echo "=== 3. Miért nem indul el a Webserver? (airflow-webserver logok) ==="
+          docker compose logs --tail=50 airflow-webserver
