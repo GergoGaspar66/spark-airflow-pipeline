@@ -33,35 +33,14 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 5. Lépés: Intelligens várakozás a belső API felállására és a DAG elindítása
+      # 5. Lépés: Várakozás és a DAG elindítása a belső Python motoron keresztül
       - name: Wait for Airflow API and Trigger DAG
         run: |
-          echo "Várakozás az Airflow belső elindulására..."
+          echo "Várakozás az Airflow és az adatbázis beindulására (45 másodperc)..."
+          sleep 45
           
-          # Maximum 30-szor próbálkozunk, 10 másodperces szünetekkel (max 5 perc)
-          for i in {1..30}; do
-            HTTP_STATUS=$(docker compose exec -T airflow-webserver curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
-            echo "Airflow belső HTTP kód: $HTTP_STATUS"
-            
-            if [ "$HTTP_STATUS" == "200" ]; then
-              echo "Az Airflow elérhető! Pipeline indítása belső API-val..."
-              
-              # DAG indítása konténeren belüli curl kéréssel
-              docker compose exec -T airflow-webserver curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" \
-              -H "Content-Type: application/json" \
-              --user "airflow:airflow" \
-              -d '{}'
-              
-              exit 0
-            fi
-            
-            sleep 10
-          done
-          
-          echo "HIBA: Az Airflow nem indult el időben!"
-          docker compose ps
-          docker compose logs --tail=50 airflow-webserver
-          exit 1
+          echo "=== Medallion Pipeline indítása a belső Python CLI segítségével ==="
+          docker compose exec -T airflow-webserver python -m airflow dags trigger medallion_full_pipeline
 
       # 6. Lépés: Várakozás a PySpark feladat lefutására és a státusz ellenőrzése
       - name: Check DAG Execution Status
@@ -70,5 +49,4 @@ jobs:
           sleep 50
           
           echo "=== Pipeline legfrissebb futási státusza ==="
-          docker compose exec -T airflow-webserver curl -X GET "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" \
-          --user "airflow:airflow"
+          docker compose exec -T airflow-webserver python -m airflow dags state medallion_full_pipeline
