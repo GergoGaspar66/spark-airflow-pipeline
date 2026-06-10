@@ -26,41 +26,15 @@ jobs:
           echo "AIRFLOW_UID=$(id -u)" > .env
           docker compose up --build -d
 
-      # 4. és 5. Lépés: Várakozás a webserverre és a DAG elindítása API-n keresztül
-      - name: Wait for Airflow API and Trigger DAG
-        run: |
-          echo "Várakozás az Airflow webserver elindulására..."
-          
-          # Max 30-szor próbálkozunk, 10 másodperces szünetekkel
-          for i in {1..30}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
-            echo "Airflow webserver HTTP kód: $HTTP_STATUS"
-            
-            if [ "$STATUS" == "200" ] || [ "$HTTP_STATUS" == "200" ]; then
-              echo "Az Airflow elérhető! Pipeline indítása..."
-              
-              # DAG indítása a hivatalos REST API-n keresztül
-              curl -X POST "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns" \
-              -H "Content-Type: application/json" \
-              --user "airflow:airflow" \
-              -d '{}'
-              
-              exit 0
-            fi
-            
-            sleep 10
-          done
-          
-          echo "HIBA: Az Airflow nem válaszolt időben!"
-          docker compose ps
-          exit 1
+      # 4. Lépés: Várunk kicsit, hogy a Docker generálja a hibákat
+      - name: Wait for Logs
+        run: sleep 20
 
-      # 6. Lépés: Várakozás és a futási státusz ellenőrzése
-      - name: Check DAG Execution Status
+      # 5. Lépés: KIOLVASSUK A VALÓDI HIBÁT
+      - name: Read Docker Crash Logs
         run: |
-          echo "Várakozás 50 másodpercet a PySpark feladat futására..."
-          sleep 50
+          echo "=== 1. Melyik konténer omlott össze? (Státusz lista) ==="
+          docker compose ps
           
-          echo "=== Pipeline legfrissebb futási státusza ==="
-          curl -X GET "http://localhost:8080/api/v1/dags/medallion_full_pipeline/dagRuns?limit=1&order_by=-start_date" \
-          --user "airflow:airflow"
+          echo "=== 2. Miért állt le a Webserver? (Hibanapló) ==="
+          docker compose logs --tail=50 airflow-webserver
