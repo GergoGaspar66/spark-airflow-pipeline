@@ -1,5 +1,6 @@
 import os
 import shutil
+import glob
 from prefect import flow, task
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
@@ -46,19 +47,22 @@ def gold_task(spark):
 
 @flow(name="Modular-Delta-Medallion-Pipeline")
 def main_orchestrator():
-    # JAVÍTÁS: Mielőtt elindul a Spark, fizikailag letöröljük a régi, nem particionált adatokat.
-    # Ez garantálja, hogy a Delta Lake tiszta lappal indul, és engedi a dátum alapú könyvtárakat!
-    if os.path.exists("data"):
-        print("=== Régi adatszerkezet eltávolítása a tiszta particionáláshoz ===")
+    # Ha nincs új fájl, békén hagyjuk a meglévő Git-ből letöltött data/bronze mappát, így a Silver sem fog elhasalni.
+    new_csv_files = glob.glob("raw/*.csv")
+    
+    if new_csv_files and os.path.exists("data"):
+        print("=== Új adatok érkeztek. Régi adatszerkezet eltávolítása a tiszta particionáláshoz ===")
         shutil.rmtree("data")
+    elif not new_csv_files:
+        print("=== Nincsenek új nyers fájlok, megtartjuk a meglévő data könyvtárat. ===")
 
     spark = get_spark_session()
 
     try:
-        # A fázisok futtatása sorrendben (Az overwriteSchema NÉLKÜLI scriptekkel)
-        bronze_task(spark)
-        silver_task(spark)
-        gold_task(spark)
+        # A fázisok futtatása szigorú Prefect függőséggel (submit és wait_for használata ajánlott)
+        bronze_future = bronze_task.submit(spark)
+        silver_future = silver_task.submit(spark, wait_for=[bronze_future])
+        gold_task.submit(spark, wait_for=[silver_future])
     finally:
         print("=== Spark Session biztonságos leállítása ===")
         spark.stop()
