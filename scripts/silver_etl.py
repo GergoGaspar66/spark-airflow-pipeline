@@ -326,12 +326,6 @@ def run_silver(spark):
             else:
                 writer.save(target_path)
 
-        # === NOT NULL CONSTRAINTS AKTIVÁLÁSA AZ ELSŐDLEGES KULCSOKRA ===
-        log_info("Konstrukcios NOT NULL kenyszerfeltetelek ellenorzese es aktivalasa...")
-        spark.sql(f"ALTER TABLE delta.`{customer_dim_path}` ALTER COLUMN Customer_Key SET NOT NULL")
-        spark.sql(f"ALTER TABLE delta.`{product_dim_path}` ALTER COLUMN Product_Key SET NOT NULL")
-        spark.sql(f"ALTER TABLE delta.`{date_dim_path}` ALTER COLUMN Date_Key SET NOT NULL")
-        spark.sql(f"ALTER TABLE delta.`{os.path.join(silver_base_dir, 'fact_sales')}` ALTER COLUMN Order_No SET NOT NULL")
 
         log_info("--- SILVER LAYER PROCESSING FINISHED ---")
 
