@@ -52,8 +52,19 @@ def run_silver(spark):
     log_info("--- SILVER LAYER PROCESSING STARTED ---")
     log_info(f"Logfajl mentese ide: {log_file}")
 
-    bronze_dir = "data/bronze"
-    silver_base_dir = "data/silver"  # Alapmappa a csillagsémának
+    # Lekérjük a futó script (silver_etl.py) abszolút fizikai helyét a runneren
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Mivel a script a 'scripts' mappában van, a szülőmappa lesz a projekt fő gyökere
+    project_root = os.path.dirname(current_script_dir)
+
+    # Biztonságos, abszolút útvonalak létrehozása a Spark számára
+    bronze_dir = os.path.join(project_root, "data", "bronze")
+    silver_base_dir = os.path.join(project_root, "data", "silver")
+
+    # Debug logok, hogy a Prefect UI-on pontosan lásd a fizikai mappát hiba esetén
+    log_info(f"DEBUG - Keresett abszolut Bronze utvonal: {bronze_dir}")
+    log_info(f"DEBUG - Letezik a mappa a runneren? {os.path.exists(bronze_dir)}")
 
     try:
         # Delta adatok beolvasása a Bronze rétegből
