@@ -3,3 +3,8 @@
 2026-06-11 21:40:13,671 - INFO - DEBUG - Keresett abszolut Bronze utvonal: /home/runner/work/spark-airflow-pipeline/spark-airflow-pipeline/data/bronze
 2026-06-11 21:40:13,672 - INFO - DEBUG - Letezik a mappa a runneren? False
 2026-06-11 21:40:13,673 - WARNING - A Bronze mappa hianyzik vagy teljesen ures: /home/runner/work/spark-airflow-pipeline/spark-airflow-pipeline/data/bronze. A Silver feldolgozas atugorva.
+2026-06-11 21:45:31,356 - INFO - --- SILVER LAYER PROCESSING STARTED ---
+2026-06-11 21:45:31,358 - INFO - Logfajl mentese ide: logs/silver_20260611.log
+2026-06-11 21:45:31,361 - INFO - DEBUG - Keresett abszolut Bronze utvonal: /home/runner/work/spark-airflow-pipeline/spark-airflow-pipeline/data/bronze
+2026-06-11 21:45:31,362 - INFO - DEBUG - Letezik a mappa a runneren? True
+2026-06-11 21:45:31,364 - WARNING - A Bronze mappa hianyzik vagy teljesen ures: /home/runner/work/spark-airflow-pipeline/spark-airflow-pipeline/data/bronze. A Silver feldolgozas atugorva.
