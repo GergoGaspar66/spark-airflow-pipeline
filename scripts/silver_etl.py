@@ -67,10 +67,22 @@ def run_silver(spark):
     log_info(f"DEBUG - Letezik a mappa a runneren? {os.path.exists(bronze_dir)}")
 
     try:
-        # Delta adatok beolvasása a Bronze rétegből
+        # 1. ELLENŐRZÉS: Létezik-e a mappa, és van-e benne egyáltalán adat?
+        # Ha a mappa nem létezik, vagy teljesen üres (nincs benne _delta_log), akkor átugorjuk a Silver fázist
+        if not os.path.exists(bronze_dir) or not os.listdir(bronze_dir):
+            log_warning(f"A Bronze mappa hianyzik vagy teljesen ures: {bronze_dir}. A Silver feldolgozas atugorva.")
+            return
+
+        # Biztonsági ellenőrzés: Megnézzük, hogy a Delta napló ott van-e a mappában
+        delta_log_path = os.path.join(bronze_dir, "_delta_log")
+        if not os.path.exists(delta_log_path):
+            log_warning(f"A mappa letezik, de nem ervenyes Delta tabla (hianyzik a _delta_log): {bronze_dir}. Silver atugorva.")
+            return
+
+        # 2. BIZTONSÁGOS BEOLVASÁS: Ha a fenti ellenőrzések sikeresek, csak akkor olvassuk be
         log_info(f"Bronze Delta tabla beolvasasa innen: {bronze_dir}")
         df_bronze = spark.read.format("delta").load(bronze_dir)
-        
+
         sorok_szama_nyers = df_bronze.count()
         if sorok_szama_nyers == 0:
             log_warning("A Bronze tabla ures. Silver reteg feldolgozasa leallitva.")
