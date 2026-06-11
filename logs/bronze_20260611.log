@@ -1,0 +1,3 @@
+2026-06-11 21:40:13,616 - INFO - --- BRONZE LAYER PROCESSING STARTED ---
+2026-06-11 21:40:13,619 - INFO - Logfajl mentese ide: logs/bronze_20260611.log
+2026-06-11 21:40:13,621 - WARNING - Nem talalhato feldolgozando CSV fajl. Bronze reteg atugorva.
