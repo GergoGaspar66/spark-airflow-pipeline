@@ -1,7 +1,7 @@
 import os
 import shutil
 import glob
-from prefect import flow, task
+from prefect import flow, task, get_run_logger
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
@@ -47,22 +47,32 @@ def gold_task(spark):
 
 @flow(name="Modular-Delta-Medallion-Pipeline")
 def main_orchestrator():
-    # Ha nincs új fájl, békén hagyjuk a meglévő Git-ből letöltött data/bronze mappát, így a Silver sem fog elhasalni.
+    # Inicializáljuk a Prefect futási naplózót a flow szintjén
+    logger = get_run_logger()
+
+    # 1. JAVÍTÁS: Mappa-tisztítási logika visszaállítása
     new_csv_files = glob.glob("raw/*.csv")
-    
     if new_csv_files and os.path.exists("data"):
-        print("=== Új adatok érkeztek. Régi adatszerkezet eltávolítása a tiszta particionáláshoz ===")
+        logger.info("=== Uj adatok erkeztek. Regi adatszerkezet eltavolitasa a tiszta particionalashoz ===")
         shutil.rmtree("data")
     elif not new_csv_files:
-        print("=== Nincsenek új nyers fájlok, megtartjuk a meglévő data könyvtárat. ===")
+        logger.info("=== Nincsenek uj nyers fajlok, megtartjuk a meglevo data konyvtarat ===")
 
+    # 2. JAVÍTÁS: Létrehozzuk a Spark Session-t, mielőtt átadnánk a feladatoknak!
     spark = get_spark_session()
 
     try:
-        # A fázisok futtatása szigorú Prefect függőséggel (submit és wait_for használata ajánlott)
-        bronze_future = bronze_task.submit(spark)
-        silver_future = silver_task.submit(spark, wait_for=[bronze_future])
-        gold_task.submit(spark, wait_for=[silver_future])
+        # Szigorú szinkron (szálbiztos) végrehajtás egyetlen szálon
+        logger.info("=== Pipeline szakaszok inditasa egyetlen szalon ===")
+        
+        bronze_task(spark)
+        silver_task(spark)
+        gold_task(spark)
+        
+        logger.info("=== Minden Medallion szakasz sikeresen lefutott ===")
+    except Exception as e:
+        logger.error(f"Hiba a pipeline futtatasa kozben: {e}")
+        raise e
     finally:
         print("=== Spark Session biztonságos leállítása ===")
         spark.stop()
