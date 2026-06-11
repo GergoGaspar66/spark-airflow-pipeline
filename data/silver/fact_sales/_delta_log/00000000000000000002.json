@@ -1,0 +1,1 @@
+{"commitInfo":{"timestamp":1781215303317,"operation":"VACUUM END","operationParameters":{"status":"COMPLETED"},"readVersion":1,"isolationLevel":"SnapshotIsolation","isBlindAppend":true,"operationMetrics":{"numDeletedFiles":"0","numVacuumedDirectories":"2"},"engineInfo":"Apache-Spark/3.4.1 Delta-Lake/2.4.0","txnId":"c12279e1-20bc-425f-8784-5f6deb1b79d5"}}

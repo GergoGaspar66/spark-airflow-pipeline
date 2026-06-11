@@ -4,3 +4,14 @@
 2026-06-11 21:45:31,297 - INFO - --- BRONZE LAYER PROCESSING STARTED ---
 2026-06-11 21:45:31,301 - INFO - Logfajl mentese ide: logs/bronze_20260611.log
 2026-06-11 21:45:31,303 - WARNING - Nem talalhato feldolgozando CSV fajl. Bronze reteg atugorva.
+2026-06-11 22:00:52,126 - INFO - --- BRONZE LAYER PROCESSING STARTED ---
+2026-06-11 22:00:52,127 - INFO - Logfajl mentese ide: logs/bronze_20260611.log
+2026-06-11 22:00:52,128 - INFO - Talalt CSV fajlok szama: 2
+2026-06-11 22:00:52,130 - INFO - Feldolgozando fajlok listaja: data1.csv, data2.csv
+2026-06-11 22:00:55,831 - INFO - BASIC INFO - Beolvasott nyers sorok szama: 1999
+2026-06-11 22:00:55,833 - INFO - BASIC INFO - Talalt oszlopok szama: 24
+2026-06-11 22:00:55,834 - INFO - BASIC INFO - Oszlopok nevei: Order No, Order Date, Customer Name, Address, City, State, Customer Type, Account Manager, Order Priority, Product Name, Product Category, Product Container, Ship Mode, Ship Date, Cost Price, Retail Price, Profit Margin, Order Quantity, Sub Total, Discount %, Discount $, Order Total, Shipping Cost, Total
+2026-06-11 22:01:02,790 - INFO - Az adatok sikeresen elmentve particionalva a Delta tablaba: data/bronze
+2026-06-11 22:01:02,791 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data1.csv
+2026-06-11 22:01:02,793 - INFO - Fajl sikeresen archivalva ide: processed/bronze/data2.csv
+2026-06-11 22:01:02,794 - INFO - --- BRONZE LAYER PROCESSING FINISHED ---
